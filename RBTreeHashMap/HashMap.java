@@ -1,7 +1,11 @@
+import java.util.TreeMap;
+import java.util.Iterator;
+
 public class HashMap {
     private int defaultVal;
     private double scaleFactor;
     private Node store[];
+    private int toBRTreeVal = 4;
     public HashMap() {
         this.defaultVal = 16;
         this.scaleFactor = 0.75;
@@ -29,15 +33,30 @@ public class HashMap {
         }
         // 放入指定位置
         Node current = this.store[position];
+        int linkLen = 0;
         while(true) {
+            linkLen++;
             if(current.key.equals(key)) {
                 current.value = value;
                 break;
             }
             if(null == current.next) {
                 current.next = new Node(key, value, null);
+                break;
             }
             current = current.next;
+        }
+        if (this.toBRTreeVal < linkLen) {
+            TreeMap treeMap = new TreeMap();
+            while(true) {
+                treeMap.put(current.key, current.value);
+                if(null == current.next) {
+                    break;
+                }
+                current = current.next;
+            }
+            this.store[position].key = "BRTree";
+            this.store[position].value = treeMap;
         }
         // 获得数组非空值
         int notNullNum = this.defaultVal;
@@ -60,6 +79,10 @@ public class HashMap {
         }
         Node current = this.store[position];
         while(true) {
+            if("RBTree" == current.key && current.value instanceof TreeMap) {
+                TreeMap currentTreeMap = (TreeMap)current.value;
+                return currentTreeMap.get(key);
+            }
             if(current.key.equals(key)) {
                 return current.value;
             }
@@ -68,6 +91,7 @@ public class HashMap {
             }
             current = current.next;
         }
+        
     }
     // 扩容方法
     public void resize(int multiplier) {
@@ -76,30 +100,46 @@ public class HashMap {
         Node newStore[] = new Node[this.defaultVal];
         for(int i = 0; i < oldDefaultVal; i++) {
             if(null != this.store[i]) {
-                newStore[this.hash(this.store[i].key)] = this.store[i];
+                Node current = this.store[i];
+                if (current.key == "RBTree" && current.value instanceof TreeMap) {
+                    TreeMap currentTreeMap = (TreeMap)current.value;
+                    newStore[this.hash(currentTreeMap.firstKey())] = current;
+                } else if (current instanceof Node) {
+                    newStore[this.hash(current.key)] = current;
+                }
             }
         }
         this.store= newStore;
     }
-    // 打印扩容状态
-    public void testResize() {
+    // 打印转化状况
+    public void testTrans() {
         System.out.printf("当前数组大小为%d\n", this.defaultVal);
         for(int i = 0; i < this.defaultVal; i++) {
             System.out.printf("第%d位：", i);
             Node current = this.store[i];
-            int j = 0;
-            while(true) {
-                if(null != current) {
-                    System.out.printf("%d->[%s]=%s ", j, current.key, current.value);
-                }else {
-                    System.out.printf("该位无值"); 
-                    break;
+            if (null != current && current.key == "RBTree" && current.value instanceof TreeMap) {
+                TreeMap currentTreeMap = (TreeMap)current.value;
+                Iterator it = currentTreeMap.keySet().iterator();
+                while (it.hasNext()) {
+                    System.out.printf("BRTree:[%s]=%s", it.next(), currentTreeMap.get(it.next()));
                 }
-                if(null == current.next) {
-                    break;
+            } else if (current instanceof Node) {
+                int j = 0;
+                while(true) {
+                    if(null != current) {
+                        System.out.printf("link:%d->[%s]=%s ", j, current.key, current.value);
+                    }else {
+                        System.out.printf("该位无值");
+                        break;
+                    }
+                    if(null == current.next) {
+                        break;
+                    }
+                    current = current.next;
+                    j++;
                 }
-                current = current.next;
-                j++;
+            } else {
+                System.out.printf("无");
             }
             System.out.println();
         }
